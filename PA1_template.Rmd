@@ -1,25 +1,140 @@
----
-title: "Reproducible Research: Peer Assessment 1"
+--- 
+title: "Reproducible Research" 
 output: 
-  html_document:
-    keep_md: true
+  html_document: 
+    keep_md: true 
 ---
-
 
 ## Loading and preprocessing the data
+```{r}
+library(ggplot2)
+
+activity<-read.csv("activity.csv")
+str(activity)
+activity$date <- as.Date(as.character(activity$date))
+cleanActivity <- activity[!is.na(activity$steps),]
+```
+
+##Mean total number of steps taken per day
+```{r}
+
+stepsPerDay <- with(activity, aggregate(steps, by = list(date), sum))
+names(stepsPerDay)[1]="date"
+names(stepsPerDay)[2]="totalSteps"
+
+```
+###plot
 
 
 
-## What is mean total number of steps taken per day?
+```{r}
+ggplot(stepsPerDay, aes(x = totalSteps)) +
+     geom_histogram(fill = "steelblue", binwidth=1000) +
+     labs(title = "Total Daily Steps", x = "Steps", y = "Frequency")
+```
+##Mean and median of the total number of steps taken per day
+
+```{r}
+mean(stepsPerDay$totalSteps,na.rm = TRUE)
+```
+```{r}
+median(stepsPerDay$totalSteps,na.rm = TRUE)
+```
+#Average daily activity pattern
+
+
+```{r}
+MeanDataInterval<- with(cleanActivity, aggregate(steps, by = list(interval), mean))
+names(MeanDataInterval)[1]="interval"
+names(MeanDataInterval)[2]="steps"
+```
+
+###plot
+```{r}
+plot(MeanDataInterval,type="l",main = "Sum of Steps by Interval",xlab = "interval", ylab = "steps")
+```
+
+###On average across all the days in the dataset, contains the maximum number of steps
+
+
+```{r}
+maxInterval <- MeanDataInterval[which.max(MeanDataInterval$steps),]
+maxInterval
+```
+##Imputing missing values
+###Total number of missing values in the dataset
 
 
 
-## What is the average daily activity pattern?
+```{r}
+summary(activity$steps)
+```
+
+###Strategy for filling in all of the missing values in the dataset.
 
 
+```{r}
+activity2<-activity
+missingData <- is.na(activity2$steps)
+MeanData2Interval <- aggregate(cleanActivity$steps, by=list(cleanActivity$interval), sum)
+names(MeanData2Interval)[1]="interval"
+names(MeanData2Interval)[2]="steps"
 
-## Imputing missing values
+meanVals <- tapply(cleanActivity$steps, cleanActivity$interval, mean, na.rm=TRUE, simplify=TRUE)
+activity2$steps[missingData] <- meanVals[as.character(activity2$interval[missingData])]
+
+head(activity2)
+```
+
+###Calculate and report the mean and median total number of steps taken per day.
+
+```{r}
+stepsPerDay2 <- with(activity2, aggregate(steps, by = list(date), sum))
+names(stepsPerDay2)[1]="date"
+names(stepsPerDay2)[2]="totalsteps"
+```
+
+###Histogram of the total number of steps taken each day
+
+```{r}
+ggplot(stepsPerDay2, aes(x = totalsteps)) +
+    geom_histogram(fill="red",binwidth = 1000) + 
+    labs(title = "Total Daily Steps", x = "Steps", y = "Frequency")
+```
+
+### Mean and median total number of steps taken per day.
+
+```{r}
+mean(stepsPerDay2$totalsteps)
+median(stepsPerDay2$totalsteps)
+```
+
+The effect of using mean data per interval as a data impute method for missing values seems to push overall data towards the mean
 
 
+#Differences in activity patterns between weekdays and weekends
 
-## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+activity2$weekday <- weekdays(activity2$date)
+activity2$weekend <- ifelse (activity2$weekday == "Saturday" | activity2$weekday == "Sunday", "Weekend", "Weekday")
+head(activity2)
+```
+
+```{r}
+MeanWeeks <- with(activity2, aggregate(steps, by = list(weekend,interval),mean))
+names(MeanWeeks)[1]="weekend"
+names(MeanWeeks)[2]="interval"
+names(MeanWeeks)[3]="steps"
+```
+
+
+###plot
+```{r}
+ggplot(MeanWeeks, aes(x = interval, y=steps, color=weekend)) +
+       geom_line() +
+       facet_grid(weekend ~ .) +
+       labs(title = "Mean of Steps by Interval", x = "interval", y = "steps")
+```
+
+There seems to be variation in the beginning of the day during weekdays, likely due to workplace activities.There seems to be an overall slightly larger incidence of steps during the weekends.
+
